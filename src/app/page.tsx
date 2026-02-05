@@ -1,65 +1,151 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+const API_BASE = "http://localhost:3000";
 
 export default function Home() {
+  // ---- INGEST ----
+  const [url, setUrl] = useState("");
+  const [ingestResult, setIngestResult] = useState<any>(null);
+  const [ingesting, setIngesting] = useState(false);
+
+  // ---- RAG ----
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [sources, setSources] = useState<any[]>([]);
+  const [asking, setAsking] = useState(false);
+
+  const ingest = async () => {
+    setIngesting(true);
+    setIngestResult(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setIngestResult({
+          error: data.error || "Ingest failed",
+        });
+        return;
+      }
+
+      setIngestResult(data);
+    } catch (err) {
+      setIngestResult({ error: "Failed to connect to backend" });
+    } finally {
+      setIngesting(false);
+    }
+  };
+
+  const ask = async () => {
+    setAsking(true);
+    setAnswer("");
+    setSources([]);
+
+    try {
+      const res = await fetch(`${API_BASE}/rag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      const data = await res.json();
+
+      // 🔴 THIS IS THE IMPORTANT FIX
+      if (!res.ok || data.error) {
+        setAnswer(data.error || "Failed to generate answer");
+        return;
+      }
+
+      setAnswer(data.answer);
+      setSources(data.sources || []);
+    } catch (err) {
+      setAnswer("Failed to connect to backend");
+    } finally {
+      setAsking(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main style={{ maxWidth: 800, margin: "40px auto", fontFamily: "sans-serif" }}>
+      <h1>📚 Czech RAG System</h1>
+
+      {/* INGEST */}
+      <section style={{ marginTop: 40 }}>
+        <h2>🔗 Ingest Website</h2>
+
+        <input
+          type="text"
+          placeholder="https://example.com/page"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          style={{ width: "100%", padding: 8 }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <button onClick={ingest} disabled={ingesting} style={{ marginTop: 10 }}>
+          {ingesting ? "Ingesting..." : "Ingest"}
+        </button>
+
+        {ingestResult && (
+          <pre
+            style={{
+              marginTop: 10,
+              background: "#f5f5f5",
+              padding: 10,
+              whiteSpace: "pre-wrap",
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            {JSON.stringify(ingestResult, null, 2)}
+          </pre>
+        )}
+      </section>
+
+      {/* RAG */}
+      <section style={{ marginTop: 60 }}>
+        <h2>❓ Ask Question</h2>
+
+        <textarea
+          rows={3}
+          placeholder="Jaká je historie obce Branná?"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          style={{ width: "100%", padding: 8 }}
+        />
+
+        <button onClick={ask} disabled={asking} style={{ marginTop: 10 }}>
+          {asking ? "Thinking..." : "Ask"}
+        </button>
+
+        {answer && (
+          <div style={{ marginTop: 20 }}>
+            <h3>🧠 Answer</h3>
+            <p>{answer}</p>
+          </div>
+        )}
+
+        {sources.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <h3>📌 Sources</h3>
+            <ul>
+              {sources.map((s, i) => (
+                <li key={i}>
+                  <a href={s.url} target="_blank" rel="noreferrer">
+                    {s.url}
+                  </a>{" "}
+                  (score: {Number(s.score).toFixed(3)})
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
