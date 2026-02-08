@@ -1,42 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import IngestSection from "@/components/IngestSection";
+import QuestionSection from "@/components/QuestionSection";
 
 const API_BASE = "http://localhost:3000";
 
 export default function Home() {
-  // ---- INGEST ----
   const [url, setUrl] = useState("");
   const [ingestResult, setIngestResult] = useState<any>(null);
   const [ingesting, setIngesting] = useState(false);
 
-  // ---- RAG ----
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState<any[]>([]);
   const [asking, setAsking] = useState(false);
+  // NEW: Store history of messages
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
 
-  const ingest = async () => {
+  const handleIngest = async () => {
     setIngesting(true);
     setIngestResult(null);
-
     try {
       const res = await fetch(`${API_BASE}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-
       const data = await res.json();
-
-      if (!res.ok || data.error) {
-        setIngestResult({
-          error: data.error || "Ingest failed",
-        });
-        return;
-      }
-
-      setIngestResult(data);
+      setIngestResult(res.ok ? data : { error: data.error || "Ingest failed" });
     } catch (err) {
       setIngestResult({ error: "Failed to connect to backend" });
     } finally {
@@ -44,108 +34,66 @@ export default function Home() {
     }
   };
 
-  const ask = async () => {
+  const handleAsk = async () => {
+    if (!question.trim()) return;
+
+    const userMsg = { role: "user", content: question };
+    setChatHistory((prev) => [...prev, userMsg]);
     setAsking(true);
-    setAnswer("");
-    setSources([]);
+    setQuestion(""); // Clear input immediately
 
     try {
       const res = await fetch(`${API_BASE}/rag`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question: userMsg.content }),
       });
-
       const data = await res.json();
+      
+      const assistantMsg = { 
+        role: "assistant", 
+        content: res.ok ? data.answer : (data.error || "Chyba při generování."),
+        sources: data.sources || [] 
+      };
 
-      // 🔴 THIS IS THE IMPORTANT FIX
-      if (!res.ok || data.error) {
-        setAnswer(data.error || "Failed to generate answer");
-        return;
-      }
-
-      setAnswer(data.answer);
-      setSources(data.sources || []);
+      setChatHistory((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      setAnswer("Failed to connect to backend");
+      setChatHistory((prev) => [...prev, { role: "assistant", content: "Chyba připojení k serveru." }]);
     } finally {
       setAsking(false);
     }
   };
 
   return (
-    <main style={{ maxWidth: 800, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <h1>📚 Czech RAG System</h1>
-
-      {/* INGEST */}
-      <section style={{ marginTop: 40 }}>
-        <h2>🔗 Ingest Website</h2>
-
-        <input
-          type="text"
-          placeholder="https://example.com/page"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-
-        <button onClick={ingest} disabled={ingesting} style={{ marginTop: 10 }}>
-          {ingesting ? "Ingesting..." : "Ingest"}
-        </button>
-
-        {ingestResult && (
-          <pre
-            style={{
-              marginTop: 10,
-              background: "#f5f5f5",
-              padding: 10,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {JSON.stringify(ingestResult, null, 2)}
-          </pre>
-        )}
-      </section>
-
-      {/* RAG */}
-      <section style={{ marginTop: 60 }}>
-        <h2>❓ Ask Question</h2>
-
-        <textarea
-          rows={3}
-          placeholder="Jaká je historie obce Branná?"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-
-        <button onClick={ask} disabled={asking} style={{ marginTop: 10 }}>
-          {asking ? "Thinking..." : "Ask"}
-        </button>
-
-        {answer && (
-          <div style={{ marginTop: 20 }}>
-            <h3>🧠 Answer</h3>
-            <p>{answer}</p>
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Sidebar: Settings/Ingest */}
+        <aside className="lg:col-span-3 space-y-4">
+          <div className="p-4">
+             <h1 className="text-2xl font-black text-gray-800">Czech RAG</h1>
+             <p className="text-xs text-gray-500 uppercase font-bold tracking-widest">v1.0 Knowledge Base</p>
           </div>
-        )}
+          <IngestSection 
+            url={url} 
+            setUrl={setUrl} 
+            ingest={handleIngest} 
+            ingesting={ingesting} 
+            ingestResult={ingestResult} 
+          />
+        </aside>
 
-        {sources.length > 0 && (
-          <div style={{ marginTop: 20 }}>
-            <h3>📌 Sources</h3>
-            <ul>
-              {sources.map((s, i) => (
-                <li key={i}>
-                  <a href={s.url} target="_blank" rel="noreferrer">
-                    {s.url}
-                  </a>{" "}
-                  (score: {Number(s.score).toFixed(3)})
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-    </main>
+        {/* Main: Chat Interface */}
+        <main className="lg:col-span-9">
+          <QuestionSection 
+            question={question}
+            setQuestion={setQuestion}
+            ask={handleAsk}
+            asking={asking}
+            chatHistory={chatHistory}
+          />
+        </main>
+      </div>
+    </div>
   );
 }
