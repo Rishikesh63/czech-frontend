@@ -3,7 +3,8 @@
 import { useState } from "react";
 import IngestSection from "@/components/IngestSection";
 import QuestionSection from "@/components/QuestionSection";
-const API_BASE = process.env.API_BASE || "http://localhost:3000";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3000";
 
 export default function Home() {
   const [url, setUrl] = useState("");
