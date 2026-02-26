@@ -7,7 +7,12 @@ interface Draft {
   question: string;
   answer_suggestion: string;
   status: "Pending" | "Approved" | "Rejected";
-  sources: any[];
+  sources: Source[];
+}
+
+interface Source {
+  url: string;
+  score: number;
 }
 
 interface QuestionSectionProps {
@@ -83,7 +88,6 @@ export default function QuestionSection({
         },
         body: JSON.stringify({
           question,
-          citizen_email: "demo@obec.cz",
           language, // send language to backend
         }),
       });
@@ -225,6 +229,7 @@ export default function QuestionSection({
                       key={i}
                       href={s.url}
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="bg-gray-100 px-2 py-1 rounded border border-gray-200 hover:bg-gray-200 truncate max-w-[200px]"
                     >
                       {s.url}
@@ -280,7 +285,7 @@ export default function QuestionSection({
 
           <button
             onClick={ask}
-            disabled={asking || !question}
+            disabled={asking || !question.trim()}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 disabled:bg-gray-300"
           >
             {t.create}

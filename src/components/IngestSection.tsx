@@ -10,7 +10,12 @@ interface IngestSectionProps {
   setUrl: (val: string) => void;
   ingest: () => void;
   ingesting: boolean;
-  ingestResult: any;
+  ingestResult: {
+    error?: string;
+    url?: string;
+    chunks_extracted?: number;
+    chunks_indexed?: number;
+  } | null;
 }
 
 export default function IngestSection({
@@ -21,8 +26,11 @@ export default function IngestSection({
   ingestResult,
 }: IngestSectionProps) {
   const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [pdfResult, setPdfResult] = useState<any>(null);
-  
+  const [pdfResult, setPdfResult] = useState<{
+    error?: string;
+    filename?: string;
+    chunks_indexed?: number;
+  } | null>(null);
 
   const handlePdfUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -38,7 +46,7 @@ export default function IngestSection({
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${API_BASE}/admin/upload-pdf`, {
+      const res = await fetch(`${API_BASE}/upload-pdf`, {
         method: "POST",
         body: formData,
       });

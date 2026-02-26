@@ -9,7 +9,12 @@ const API_BASE =
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [ingestResult, setIngestResult] = useState<any>(null);
+  const [ingestResult, setIngestResult] = useState<{
+    error?: string;
+    url?: string;
+    chunks_extracted?: number;
+    chunks_indexed?: number;
+  } | null>(null);
   const [ingesting, setIngesting] = useState(false);
 
   const [question, setQuestion] = useState("");
@@ -37,7 +42,7 @@ export default function Home() {
       } else {
         setIngestResult(data);
       }
-    } catch (err) {
+    } catch {
       setIngestResult({ error: "Nelze se připojit k backendu." });
     } finally {
       setIngesting(false);
