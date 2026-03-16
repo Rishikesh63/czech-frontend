@@ -9,6 +9,7 @@ const API_BASE =
 
 export default function Home() {
   const [url, setUrl] = useState("");
+  const [municipalityId, setMunicipalityId] = useState("");
   const [ingestResult, setIngestResult] = useState<{
     error?: string;
     url?: string;
@@ -18,6 +19,7 @@ export default function Home() {
   const [ingesting, setIngesting] = useState(false);
 
   const [question, setQuestion] = useState("");
+  const [citizenEmail, setCitizenEmail] = useState("");
 
   // -----------------------------
   // Website Ingestion
@@ -32,7 +34,10 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          url,
+          municipality_id: municipalityId.trim() || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -69,6 +74,8 @@ export default function Home() {
           <IngestSection
             url={url}
             setUrl={setUrl}
+            municipalityId={municipalityId}
+            setMunicipalityId={setMunicipalityId}
             ingest={handleIngest}
             ingesting={ingesting}
             ingestResult={ingestResult}
@@ -82,6 +89,9 @@ export default function Home() {
           <QuestionSection
             question={question}
             setQuestion={setQuestion}
+            municipalityId={municipalityId}
+            citizenEmail={citizenEmail}
+            setCitizenEmail={setCitizenEmail}
           />
         </main>
       </div>

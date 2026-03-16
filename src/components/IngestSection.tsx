@@ -8,6 +8,8 @@ const API_BASE =
 interface IngestSectionProps {
   url: string;
   setUrl: (val: string) => void;
+  municipalityId: string;
+  setMunicipalityId: (val: string) => void;
   ingest: () => void;
   ingesting: boolean;
   ingestResult: {
@@ -21,6 +23,8 @@ interface IngestSectionProps {
 export default function IngestSection({
   url,
   setUrl,
+  municipalityId,
+  setMunicipalityId,
   ingest,
   ingesting,
   ingestResult,
@@ -44,6 +48,9 @@ export default function IngestSection({
 
     const formData = new FormData();
     formData.append("file", file);
+    if (municipalityId.trim()) {
+      formData.append("municipality_id", municipalityId.trim());
+    }
 
     try {
       const res = await fetch(`${API_BASE}/upload-pdf`, {
@@ -76,6 +83,14 @@ export default function IngestSection({
       </h2>
 
       <div className="space-y-4">
+        <input
+          type="text"
+          placeholder="ID obce (volitelné), např. prague-01"
+          value={municipalityId}
+          onChange={(e) => setMunicipalityId(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+        />
+
         <input
           type="text"
           placeholder="https://www.obec.cz"

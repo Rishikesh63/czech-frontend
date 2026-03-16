@@ -18,6 +18,9 @@ interface Source {
 interface QuestionSectionProps {
   question: string;
   setQuestion: (val: string) => void;
+  municipalityId: string;
+  citizenEmail: string;
+  setCitizenEmail: (val: string) => void;
 }
 
 const API_BASE =
@@ -26,6 +29,9 @@ const API_BASE =
 export default function QuestionSection({
   question,
   setQuestion,
+  municipalityId,
+  citizenEmail,
+  setCitizenEmail,
 }: QuestionSectionProps) {
   const [asking, setAsking] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -38,6 +44,7 @@ export default function QuestionSection({
   const texts = {
     cs: {
       placeholder: "Vložte dotaz občana...",
+      emailPlaceholder: "Email občana (pro odeslání po schválení)",
       create: "Vytvořit návrh",
       generating: "Generuji návrh odpovědi...",
       title: "Návrh AI odpovědi",
@@ -53,6 +60,7 @@ export default function QuestionSection({
     },
     en: {
       placeholder: "Enter citizen question...",
+      emailPlaceholder: "Citizen email (for delivery after approval)",
       create: "Generate Draft",
       generating: "Generating draft response...",
       title: "AI Draft Reply",
@@ -89,11 +97,20 @@ export default function QuestionSection({
         body: JSON.stringify({
           question,
           language, // send language to backend
+          municipality_id: municipalityId.trim() || undefined,
+          citizen_email: citizenEmail.trim() || undefined,
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Process-question failed");
+        let apiError = "Process-question failed";
+        try {
+          const errorBody = await res.json();
+          apiError = errorBody?.error || apiError;
+        } catch {
+          // Keep generic fallback.
+        }
+        throw new Error(apiError);
       }
 
       const data = await res.json();
@@ -112,7 +129,8 @@ export default function QuestionSection({
       setQuestion("");
     } catch (err) {
       console.error(err);
-      setMessage(t.error);
+      const msg = err instanceof Error ? err.message : t.error;
+      setMessage(msg);
     }
 
     setAsking(false);
@@ -275,17 +293,26 @@ export default function QuestionSection({
       {/* Input Bar */}
       <div className="p-4 border-t bg-gray-50">
         <div className="max-w-3xl mx-auto flex gap-2">
-          <textarea
-            rows={1}
-            placeholder={t.placeholder}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none text-black"
-          />
+          <div className="w-full space-y-2">
+            <input
+              type="email"
+              placeholder={t.emailPlaceholder}
+              value={citizenEmail}
+              onChange={(e) => setCitizenEmail(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-black"
+            />
+            <textarea
+              rows={1}
+              placeholder={t.placeholder}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none text-black"
+            />
+          </div>
 
           <button
             onClick={ask}
-            disabled={asking || !question.trim()}
+            disabled={asking || !question.trim() || !citizenEmail.trim()}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 disabled:bg-gray-300"
           >
             {t.create}
