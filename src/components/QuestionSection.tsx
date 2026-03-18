@@ -34,6 +34,8 @@ export default function QuestionSection({
   setCitizenEmail,
 }: QuestionSectionProps) {
   const [asking, setAsking] = useState(false);
+  const [submittingApproval, setSubmittingApproval] = useState(false);
+  const [submittingReject, setSubmittingReject] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [language, setLanguage] = useState<"cs" | "en">("cs");
@@ -50,7 +52,9 @@ export default function QuestionSection({
       title: "Návrh AI odpovědi",
       sources: "Zdroje:",
       approve: "Schválit odpověď",
+      approving: "Schvaluji...",
       reject: "Zamítnout",
+      rejecting: "Zamítám...",
       approvedMsg: "✓ Odpověď byla schválena a odeslána občanovi.",
       rejectedMsg: "✕ Návrh byl zamítnut.",
       error: "Chyba při zpracování dotazu.",
@@ -66,7 +70,9 @@ export default function QuestionSection({
       title: "AI Draft Reply",
       sources: "Sources:",
       approve: "Approve",
+      approving: "Approving...",
       reject: "Reject",
+      rejecting: "Rejecting...",
       approvedMsg: "✓ Reply approved and sent to citizen.",
       rejectedMsg: "✕ Draft rejected.",
       error: "Error while processing the request.",
@@ -142,20 +148,35 @@ export default function QuestionSection({
   const approve = async () => {
     if (!draft) return;
 
+    setSubmittingApproval(true);
+    setMessage(null);
+
     try {
       const res = await fetch(
         `${API_BASE}/draft/${draft.id}/approve`,
         { method: "PUT" }
       );
 
-      if (!res.ok) throw new Error("Approve failed");
+      if (!res.ok) {
+        let apiError = "Approve failed";
+        try {
+          const errorBody = await res.json();
+          apiError = errorBody?.error || apiError;
+        } catch {
+          // Keep generic fallback.
+        }
+        throw new Error(apiError);
+      }
 
       const updatedDraft = await res.json();
       setDraft(updatedDraft);
       setMessage(t.approvedMsg);
     } catch (err) {
       console.error(err);
-      setMessage(t.error);
+      const msg = err instanceof Error ? err.message : t.error;
+      setMessage(msg);
+    } finally {
+      setSubmittingApproval(false);
     }
   };
 
@@ -165,20 +186,35 @@ export default function QuestionSection({
   const reject = async () => {
     if (!draft) return;
 
+    setSubmittingReject(true);
+    setMessage(null);
+
     try {
       const res = await fetch(
         `${API_BASE}/draft/${draft.id}/reject`,
         { method: "PUT" }
       );
 
-      if (!res.ok) throw new Error("Reject failed");
+      if (!res.ok) {
+        let apiError = "Reject failed";
+        try {
+          const errorBody = await res.json();
+          apiError = errorBody?.error || apiError;
+        } catch {
+          // Keep generic fallback.
+        }
+        throw new Error(apiError);
+      }
 
       const updatedDraft = await res.json();
       setDraft(updatedDraft);
       setMessage(t.rejectedMsg);
     } catch (err) {
       console.error(err);
-      setMessage(t.error);
+      const msg = err instanceof Error ? err.message : t.error;
+      setMessage(msg);
+    } finally {
+      setSubmittingReject(false);
     }
   };
 
@@ -261,16 +297,18 @@ export default function QuestionSection({
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={approve}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                  disabled={submittingApproval || submittingReject}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300"
                 >
-                  {t.approve}
+                  {submittingApproval ? t.approving : t.approve}
                 </button>
 
                 <button
                   onClick={reject}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                  disabled={submittingApproval || submittingReject}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-300"
                 >
-                  {t.reject}
+                  {submittingReject ? t.rejecting : t.reject}
                 </button>
               </div>
             )}
