@@ -30,6 +30,7 @@ export default function IngestSection({
   ingestResult,
 }: IngestSectionProps) {
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [selectedPdfName, setSelectedPdfName] = useState<string | null>(null);
   const [pdfResult, setPdfResult] = useState<{
     error?: string;
     filename?: string;
@@ -42,6 +43,7 @@ export default function IngestSection({
     if (!e.target.files || e.target.files.length === 0) return;
 
     const file = e.target.files[0];
+    setSelectedPdfName(file.name);
 
     setUploadingPdf(true);
     setPdfResult(null);
@@ -129,30 +131,56 @@ export default function IngestSection({
       {/* -------------------------------
           PDF UPLOAD SECTION
       -------------------------------- */}
-      <div className="mt-8 border-t pt-6">
-        <h2 className="text-xl text-black font-bold mb-4 flex items-center gap-2">
-          📄 Nahrát PDF dokument
-        </h2>
+      <div className="mt-8 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-5 shadow-sm">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl text-black font-bold flex items-center gap-2">
+              📄 Nahrát PDF dokument
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Nahrajte vyhlášky, formuláře nebo interní dokumenty přímo do znalostní báze.
+            </p>
+          </div>
+          <span className="rounded-full bg-blue-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+            PDF Upload
+          </span>
+        </div>
 
-        <input
-          type="file"
-          accept="application/pdf"
-          onChange={handlePdfUpload}
-          className="w-full text-sm"
-        />
+        <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-300 bg-white px-4 py-6 text-center transition hover:border-blue-500 hover:bg-blue-50">
+          <span className="text-3xl">⬆</span>
+          <span className="mt-2 text-sm font-semibold text-gray-900">
+            Klikněte pro výběr PDF souboru
+          </span>
+          <span className="mt-1 text-xs text-gray-500">
+            Podporován je jeden PDF dokument na nahrání
+          </span>
+
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handlePdfUpload}
+            className="hidden"
+          />
+        </label>
+
+        {selectedPdfName && (
+          <div className="mt-3 rounded-xl border border-blue-200 bg-blue-100/70 px-3 py-2 text-sm text-blue-900">
+            Vybraný soubor: <span className="font-semibold">{selectedPdfName}</span>
+          </div>
+        )}
 
         {uploadingPdf && (
-          <p className="mt-2 text-sm text-gray-500">
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             Zpracovávám PDF dokument...
-          </p>
+          </div>
         )}
 
         {pdfResult && (
           <div
-            className={`mt-2 p-3 rounded-lg text-sm ${
+            className={`mt-3 rounded-xl border px-3 py-3 text-sm ${
               pdfResult.error
-                ? "bg-red-50 text-red-700"
-                : "bg-green-50 text-green-700"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-green-200 bg-green-50 text-green-700"
             }`}
           >
             {pdfResult.error
@@ -160,6 +188,10 @@ export default function IngestSection({
               : `✓ PDF "${pdfResult.filename}" bylo úspěšně přidáno (${pdfResult.chunks_indexed} částí).`}
           </div>
         )}
+
+        <div className="mt-4 rounded-xl bg-slate-900 px-4 py-3 text-xs leading-5 text-slate-200">
+          Tip: PDF upload je vhodný pro dokumenty, které nejsou dobře čitelné přímo z webu obce.
+        </div>
       </div>
     </section>
   );
